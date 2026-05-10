@@ -10,6 +10,15 @@ if (!MONGODB_URI) {
 
 const Artigos = [
     {
+        titulo: 'Vínculo Empregatício e Pejotização: Cuidados para Evitar Passivos',
+        slug: 'vinculo-empregaticio-pejotizacao-cuidados',
+        descricao: 'Entenda os riscos da contratação como PJ e saiba quando a Justiça do Trabalho reconhece o vínculo empregatício.',
+        conteudo: `A contratação de trabalhadores como Pessoa Jurídica (PJ) é uma prática cada vez mais comum, mas que exige cuidados para não configurar uma relação de emprego disfarçada. Quando presentes os requisitos do artigo 3º da CLT — pessoalidade, onerosidade, não eventualidade e subordinação —, o vínculo empregatício pode ser reconhecido judicialmente.\n\nNosso escritório orienta empresas na estruturação de contratos que minimizem riscos trabalhistas, sempre respeitando a legislação vigente. Para o trabalhador, atuamos na defesa de direitos como reconhecimento de vínculo, horas extras e verbas rescisórias.\n\nA Reforma Trabalhista trouxe novas modalidades de contratação, mas a essência da proteção ao trabalhador permanece. Conhecer os limites legais é a melhor forma de prevenir litígios e garantir segurança jurídica.`,
+        autor: 'Yan Renat',
+        data: new Date('2026-04-28'),
+        curtidas: 0
+    },
+    {
         titulo: 'Aposentadoria por Idade: Novas Regras e Cálculo Atualizado',
         slug: 'aposentadoria-idade-novas-regras',
         descricao: 'Entenda as mudanças recentes na aposentadoria por idade e como se planejar para garantir o benefício integral.',
