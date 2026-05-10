@@ -50,4 +50,23 @@ router.post('/:id/curtir', async (req, res) => {
     }
 });
 
+// Descurtir um artigo (decrementa o contador, sem ficar negativo)
+router.post('/:id/descurtir', async (req, res) => {
+    try {
+        const artigo = await Artigo.findById(req.params.id);
+        if (!artigo) {
+            return res.status(404).json({ message: 'Artigo não encontrado' });
+        }
+        if (artigo.curtidas <= 0) {
+            return res.status(400).json({ message: 'Não é possível descurtir, zero curtidas.' });
+        }
+        artigo.curtidas -= 1;
+        await artigo.save();
+        res.json({ curtidas: artigo.curtidas });
+    } catch (err) {
+        console.error('Erro ao descurtir artigo:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 module.exports = router;
