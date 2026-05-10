@@ -25,6 +25,10 @@ const ArtigoSchema = new mongoose.Schema({
     data: {
         type: Date,
         default: Date.now
+    },
+    curtidas: {
+        type: Number,
+        default: 0
     }
 });
 
