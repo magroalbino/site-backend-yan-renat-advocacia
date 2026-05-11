@@ -10,6 +10,7 @@ router.use(ensureDb);
 
 /**
  * GET /api/comentarios/:slug
+ * Retorna todos os comentários do artigo, incluindo o _id de cada um.
  */
 router.get('/:slug', async (req, res) => {
     try {
@@ -18,7 +19,8 @@ router.get('/:slug', async (req, res) => {
 
         const comentarios = await Comentario.find({ slug })
             .sort({ data: -1 })
-            .select('nome texto data'); // selecione apenas campos necessários
+            // removido .select() para retornar o documento completo (inclui _id)
+            .lean();
 
         return res.status(200).json({ comments: comentarios });
     } catch (err) {
@@ -48,7 +50,7 @@ router.post(
                 slug,
                 nome: req.body.nome,
                 texto: req.body.texto,
-                ip: req.ip // opcional: armazenar IP para moderação
+                ip: req.ip
             };
 
             const comentario = await Comentario.create(payload);
@@ -59,5 +61,19 @@ router.post(
         }
     }
 );
+
+// DELETE /api/comentarios/:id
+router.delete('/:id', async (req, res) => {
+    try {
+        const comentario = await Comentario.findByIdAndDelete(req.params.id);
+        if (!comentario) {
+            return res.status(404).json({ message: 'Comentário não encontrado' });
+        }
+        res.json({ message: 'Comentário removido com sucesso' });
+    } catch (err) {
+        console.error('Erro ao excluir comentário:', err);
+        return res.status(500).json({ error: err.message });
+    }
+});
 
 module.exports = router;

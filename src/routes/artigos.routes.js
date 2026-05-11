@@ -26,7 +26,7 @@ router.get('/:slug', async (req, res) => {
         if (!artigo) {
             return res.status(404).json({ message: 'Artigo não encontrado' });
         }
-        res.json(artigo);
+        res.json(artigo);   // retorna o documento inteiro, incluindo 'conteudo'
     } catch (err) {
         res.status(500).json({ message: 'Erro ao buscar artigo', error: err.message });
     }
