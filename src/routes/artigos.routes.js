@@ -7,15 +7,13 @@ const router = express.Router();
 router.use(ensureDb);
 
 // Listar todos os artigos (apenas campos essenciais para os cards)
-router.get('/', async (req, res) => {
+router.get('/:slug', async (req, res) => {
     try {
-        const artigos = await Artigo.find()
-            .sort({ data: -1 })
-            .select('titulo slug descricao data autor');
-        res.json(artigos);
+        const artigo = await Artigo.findOne({ slug: req.params.slug });
+        if (!artigo) return res.status(404).json({ message: 'Artigo não encontrado' });
+        res.json(artigo); // retorna o documento inteiro, incluindo 'conteudo'
     } catch (err) {
-        console.error('Erro ao listar artigos:', err);
-        res.status(500).json({ message: 'Erro ao listar artigos', error: err.message });
+        res.status(500).json({ message: 'Erro ao buscar artigo', error: err.message });
     }
 });
 
