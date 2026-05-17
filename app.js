@@ -1,40 +1,36 @@
 const express = require('express');
 const cors = require('cors');
-// ... demais requires
+// ... outros requires
 
 const app = express();
 
 // ==========================================
-// Configuração de CORS – Permite previews do Vercel
+// Configuração de CORS – Permite produção, previews e local
 // ==========================================
-const allowedOrigins = [
-    'https://site-yan-renat-advocacia.vercel.app',   // produção
-    'http://localhost:3000',                           // desenvolvimento local
-    'http://127.0.0.1:3000'
-];
-
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permite requisições sem origin (ex.: Postman, curl)
+        // Permite requisições sem origin (ex.: Postman, curl, navegadores em modo no-cors)
         if (!origin) return callback(null, true);
 
-        // Verifica se a origem está na lista fixa
-        if (allowedOrigins.includes(origin)) {
+        // Lista explícita de origens confiáveis
+        const allowed = [
+            'https://site-yan-renat-advocacia.vercel.app',   // produção
+            'http://localhost:3000',                           // dev local
+            'http://127.0.0.1:3000'
+        ];
+
+        // Verifica a lista explícita
+        if (allowed.includes(origin)) {
             return callback(null, true);
         }
 
-        // Permite qualquer preview do Vercel do seu projeto (ex.: *-magroalbinos-projects.vercel.app)
-        // Ajuste o padrão conforme necessário; o "*" no início é seguro porque seu projeto é privado.
+        // Permite todos os previews do Vercel do seu projeto
+        // O padrão é: *-magroalbinos-projects.vercel.app
         if (origin.endsWith('-magroalbinos-projects.vercel.app')) {
             return callback(null, true);
         }
 
-        // Se quiser permitir todos os subdomínios do Vercel (menos restritivo):
-        // if (origin.endsWith('.vercel.app')) {
-        //     return callback(null, true);
-        // }
-
-        // Se nenhuma condição anterior for atendida, bloqueia
+        // Se não passar em nenhuma condição, bloqueia
         console.warn(`🔒 CORS bloqueado para origem: ${origin}`);
         callback(new Error('Origem não permitida pela política de CORS'));
     },
