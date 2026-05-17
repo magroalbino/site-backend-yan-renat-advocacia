@@ -9,7 +9,7 @@ const app = express();
 // ==========================================
 const corsOptions = {
     origin: function (origin, callback) {
-        // Permite requisições sem origin (ex.: Postman, curl, navegadores em modo no-cors)
+        // Permite requisições sem origin (ex.: Postman, curl)
         if (!origin) return callback(null, true);
 
         // Lista explícita de origens confiáveis
