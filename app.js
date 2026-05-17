@@ -1,6 +1,8 @@
 const express = require('express');
 const cors = require('cors');
-// ... outros requires
+const mongoose = require('mongoose');   // ← ESTAVA FALTANDO
+const Artigo = require('./src/models/Artigo');
+const Comentario = require('./src/models/Comentario');
 
 const app = express();
 
@@ -25,12 +27,11 @@ const corsOptions = {
         }
 
         // Permite todos os previews do Vercel do seu projeto
-        // O padrão é: *-magroalbinos-projects.vercel.app
         if (origin.endsWith('-magroalbinos-projects.vercel.app')) {
             return callback(null, true);
         }
 
-        // Se não passar em nenhuma condição, bloqueia
+        // Bloqueia outras origens
         console.warn(`🔒 CORS bloqueado para origem: ${origin}`);
         callback(new Error('Origem não permitida pela política de CORS'));
     },
@@ -187,163 +188,47 @@ app.get('/', (req, res) => {
             box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
             text-align: center;
         }
-        .logo {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            color: #DAA14F;
-            text-shadow: 0 0 20px rgba(218,161,79,0.5);
-        }
-        h1 {
-            font-family: 'Oswald', sans-serif;
-            font-size: 2.5rem;
-            font-weight: 600;
-            margin-bottom: 0.5rem;
-            letter-spacing: 1px;
-        }
-        .badge {
-            display: inline-block;
-            background: rgba(218,161,79,0.15);
-            color: #DAA14F;
-            padding: 0.3rem 1rem;
-            border-radius: 20px;
-            font-size: 0.9rem;
-            font-weight: 500;
-            margin-bottom: 1.5rem;
-        }
-        p {
-            opacity: 0.8;
-            margin-bottom: 2rem;
-            line-height: 1.6;
-        }
-        .endpoints {
-            text-align: left;
-            margin: 2rem 0;
-        }
+        .logo { font-size: 4rem; margin-bottom: 1rem; color: #DAA14F; text-shadow: 0 0 20px rgba(218,161,79,0.5); }
+        h1 { font-family: 'Oswald', sans-serif; font-size: 2.5rem; font-weight: 600; margin-bottom: 0.5rem; letter-spacing: 1px; }
+        .badge { display: inline-block; background: rgba(218,161,79,0.15); color: #DAA14F; padding: 0.3rem 1rem; border-radius: 20px; font-size: 0.9rem; font-weight: 500; margin-bottom: 1.5rem; }
+        p { opacity: 0.8; margin-bottom: 2rem; line-height: 1.6; }
+        .endpoints { text-align: left; margin: 2rem 0; }
         .endpoint {
-            background: rgba(255,255,255,0.03);
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 12px;
-            padding: 1rem 1.5rem;
-            margin-bottom: 0.8rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
+            background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 12px; padding: 1rem 1.5rem; margin-bottom: 0.8rem;
+            display: flex; align-items: center; justify-content: space-between;
             transition: all 0.3s ease;
         }
-        .endpoint:hover {
-            background: rgba(218,161,79,0.08);
-            border-color: rgba(218,161,79,0.3);
-            transform: translateY(-2px);
-        }
-        .method {
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 0.2rem 0.6rem;
-            border-radius: 4px;
-            text-transform: uppercase;
-            margin-right: 1rem;
-        }
+        .endpoint:hover { background: rgba(218,161,79,0.08); border-color: rgba(218,161,79,0.3); transform: translateY(-2px); }
+        .method { font-size: 0.8rem; font-weight: 600; padding: 0.2rem 0.6rem; border-radius: 4px; text-transform: uppercase; margin-right: 1rem; }
         .method.get { background: rgba(59,130,246,0.2); color: #3b82f6; }
         .method.post { background: rgba(16,185,129,0.2); color: #10b981; }
         .method.delete { background: rgba(239,68,68,0.2); color: #ef4444; }
-        .path {
-            font-family: 'Courier New', monospace;
-            font-size: 0.95rem;
-            color: #DDD;
-        }
-        .link {
-            color: #DAA14F;
-            text-decoration: none;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            gap: 0.3rem;
-            transition: color 0.2s;
-        }
+        .path { font-family: 'Courier New', monospace; font-size: 0.95rem; color: #DDD; }
+        .link { color: #DAA14F; text-decoration: none; font-size: 0.9rem; display: flex; align-items: center; gap: 0.3rem; transition: color 0.2s; }
         .link:hover { color: #FFF; }
-        .footer {
-            margin-top: 2rem;
-            font-size: 0.85rem;
-            opacity: 0.6;
-        }
-        .footer a {
-            color: #DAA14F;
-            text-decoration: none;
-            font-weight: 500;
-        }
+        .footer { margin-top: 2rem; font-size: 0.85rem; opacity: 0.6; }
+        .footer a { color: #DAA14F; text-decoration: none; font-weight: 500; }
         .footer a:hover { text-decoration: underline; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="logo">
-            <i class="fas fa-balance-scale"></i>
-        </div>
+        <div class="logo"><i class="fas fa-balance-scale"></i></div>
         <h1>Yan Renat Advocacia</h1>
         <div class="badge">⚡ API v2.3.1 • Online</div>
         <p>Backend jurídico – fornecendo artigos, comentários e curtidas para o site institucional.</p>
-        
         <div class="endpoints">
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method get">GET</span>
-                    <span class="path">/api/health</span>
-                </div>
-                <a href="/api/health" class="link"><i class="fas fa-external-link-alt"></i> Testar</a>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method get">GET</span>
-                    <span class="path">/api/artigos</span>
-                </div>
-                <a href="/api/artigos" class="link"><i class="fas fa-external-link-alt"></i> Listar</a>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method get">GET</span>
-                    <span class="path">/api/artigos?slug=exemplo</span>
-                </div>
-                <span style="opacity:0.5;font-size:0.8rem;">Busca por slug</span>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method post">POST</span>
-                    <span class="path">/api/artigos/:id/curtir</span>
-                </div>
-                <span style="opacity:0.5;font-size:0.8rem;">Curtir</span>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method post">POST</span>
-                    <span class="path">/api/artigos/:id/descurtir</span>
-                </div>
-                <span style="opacity:0.5;font-size:0.8rem;">Descurtir</span>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method get">GET</span>
-                    <span class="path">/api/comentarios/:slug</span>
-                </div>
-                <a href="/api/comentarios/vistos-residencia-permanente-brasil" class="link"><i class="fas fa-external-link-alt"></i> Exemplo</a>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method post">POST</span>
-                    <span class="path">/api/comentarios/:slug</span>
-                </div>
-                <span style="opacity:0.5;font-size:0.8rem;">Comentar</span>
-            </div>
-            <div class="endpoint">
-                <div style="display:flex; align-items:center;">
-                    <span class="method delete">DELETE</span>
-                    <span class="path">/api/comentarios/:id</span>
-                </div>
-                <span style="opacity:0.5;font-size:0.8rem;">Excluir</span>
-            </div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method get">GET</span><span class="path">/api/health</span></div><a href="/api/health" class="link"><i class="fas fa-external-link-alt"></i> Testar</a></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method get">GET</span><span class="path">/api/artigos</span></div><a href="/api/artigos" class="link"><i class="fas fa-external-link-alt"></i> Listar</a></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method get">GET</span><span class="path">/api/artigos?slug=exemplo</span></div><span style="opacity:0.5;font-size:0.8rem;">Busca por slug</span></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method post">POST</span><span class="path">/api/artigos/:id/curtir</span></div><span style="opacity:0.5;font-size:0.8rem;">Curtir</span></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method post">POST</span><span class="path">/api/artigos/:id/descurtir</span></div><span style="opacity:0.5;font-size:0.8rem;">Descurtir</span></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method get">GET</span><span class="path">/api/comentarios/:slug</span></div><a href="/api/comentarios/vistos-residencia-permanente-brasil" class="link"><i class="fas fa-external-link-alt"></i> Exemplo</a></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method post">POST</span><span class="path">/api/comentarios/:slug</span></div><span style="opacity:0.5;font-size:0.8rem;">Comentar</span></div>
+            <div class="endpoint"><div style="display:flex; align-items:center;"><span class="method delete">DELETE</span><span class="path">/api/comentarios/:id</span></div><span style="opacity:0.5;font-size:0.8rem;">Excluir</span></div>
         </div>
-        <div class="footer">
-            <a href="https://site-yan-renat-advocacia.vercel.app"><i class="fas fa-arrow-left"></i> Ir para o site principal</a>
-        </div>
+        <div class="footer"><a href="https://site-yan-renat-advocacia.vercel.app"><i class="fas fa-arrow-left"></i> Ir para o site principal</a></div>
     </div>
 </body>
 </html>`);
