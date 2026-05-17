@@ -6,8 +6,45 @@ const Comentario = require('./src/models/Comentario');
 
 const app = express();
 
-// Middleware CORS
-app.use(cors({ origin: 'https://site-yan-renat-advocacia.vercel.app' }));
+// ==========================================
+// Configuração de CORS Inteligente
+// ==========================================
+const vercelUrl = process.env.VERCEL_URL;
+
+const corsOptions = {
+    origin: function (origin, callback) {
+        // Lista de origens permitidas
+        const allowedOrigins = [
+            'https://site-yan-renat-advocacia.vercel.app', // Produção
+            'https://site-yan-renat-advocacia-git-master-magroalbinos-projects.vercel.app', // Branch principal
+        ];
+
+        // Se estiver no Vercel, adiciona a URL atual do preview
+        if (vercelUrl) {
+            allowedOrigins.push(`https://${vercelUrl}`);
+        }
+
+        // Permite localhost e ausência de origin (navegadores às vezes não enviam)
+        if (!origin || origin.startsWith('http://localhost')) {
+            return callback(null, true);
+        }
+
+        if (allowedOrigins.includes(origin)) {
+            callback(null, true);
+        } else {
+            console.warn(`🔒 CORS bloqueado para origem: ${origin}`);
+            callback(new Error('Origem não permitida pela política de CORS'));
+        }
+    },
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+};
+
+app.use(cors(corsOptions));
+app.options('*', cors(corsOptions)); // Responde preflight para todas as rotas
+// ==========================================
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
