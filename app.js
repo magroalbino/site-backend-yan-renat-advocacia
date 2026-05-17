@@ -1,48 +1,50 @@
 const express = require('express');
 const cors = require('cors');
-const mongoose = require('mongoose');
-const Artigo = require('./src/models/Artigo');
-const Comentario = require('./src/models/Comentario');
+// ... demais requires
 
 const app = express();
 
 // ==========================================
-// Configuração de CORS Inteligente
+// Configuração de CORS – Permite previews do Vercel
 // ==========================================
-const vercelUrl = process.env.VERCEL_URL;
+const allowedOrigins = [
+    'https://site-yan-renat-advocacia.vercel.app',   // produção
+    'http://localhost:3000',                           // desenvolvimento local
+    'http://127.0.0.1:3000'
+];
 
 const corsOptions = {
     origin: function (origin, callback) {
-        // Lista de origens permitidas
-        const allowedOrigins = [
-            'https://site-yan-renat-advocacia.vercel.app', // Produção
-            'https://site-yan-renat-advocacia-git-master-magroalbinos-projects.vercel.app', // Branch principal
-        ];
+        // Permite requisições sem origin (ex.: Postman, curl)
+        if (!origin) return callback(null, true);
 
-        // Se estiver no Vercel, adiciona a URL atual do preview
-        if (vercelUrl) {
-            allowedOrigins.push(`https://${vercelUrl}`);
-        }
-
-        // Permite localhost e ausência de origin (navegadores às vezes não enviam)
-        if (!origin || origin.startsWith('http://localhost')) {
+        // Verifica se a origem está na lista fixa
+        if (allowedOrigins.includes(origin)) {
             return callback(null, true);
         }
 
-        if (allowedOrigins.includes(origin)) {
-            callback(null, true);
-        } else {
-            console.warn(`🔒 CORS bloqueado para origem: ${origin}`);
-            callback(new Error('Origem não permitida pela política de CORS'));
+        // Permite qualquer preview do Vercel do seu projeto (ex.: *-magroalbinos-projects.vercel.app)
+        // Ajuste o padrão conforme necessário; o "*" no início é seguro porque seu projeto é privado.
+        if (origin.endsWith('-magroalbinos-projects.vercel.app')) {
+            return callback(null, true);
         }
+
+        // Se quiser permitir todos os subdomínios do Vercel (menos restritivo):
+        // if (origin.endsWith('.vercel.app')) {
+        //     return callback(null, true);
+        // }
+
+        // Se nenhuma condição anterior for atendida, bloqueia
+        console.warn(`🔒 CORS bloqueado para origem: ${origin}`);
+        callback(new Error('Origem não permitida pela política de CORS'));
     },
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: true
 };
 
 app.use(cors(corsOptions));
-app.options('*', cors(corsOptions)); // Responde preflight para todas as rotas
+app.options('*', cors(corsOptions)); // responde preflight para todas as rotas
 // ==========================================
 
 app.use(express.json());
