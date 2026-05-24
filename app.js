@@ -3,7 +3,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const { body, param, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const Artigo = require('./src/models/Artigo');
 const Comentario = require('./src/models/Comentario');
 
@@ -236,7 +236,7 @@ app.post('/api/comentarios/:slug',
             const artigo = await Artigo.findOne({ slug: req.params.slug });
             if (!artigo) return res.status(404).json({ error: 'Artigo não encontrado' });
 
-            const autorToken = uuidv4();
+            const autorToken = crypto.randomUUID();
 
             const comentario = await Comentario.create({
                 slug: req.params.slug,
@@ -314,6 +314,36 @@ app.get('/api/health', async (req, res) => {
 });
 
 // ==========================================
+// Favicon SVG (balança da justiça)
+// ==========================================
+const faviconSvg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <rect width="64" height="64" rx="12" fill="#0F212F"/>
+  <g transform="translate(32,32)" fill="#DAA14F">
+    <rect x="-1.5" y="-20" width="3" height="36" rx="1.5"/>
+    <rect x="-12" y="16" width="24" height="3" rx="1.5"/>
+    <rect x="-18" y="-20" width="36" height="3" rx="1.5"/>
+    <circle cx="-18" cy="-18.5" r="3"/>
+    <circle cx="18" cy="-18.5" r="3"/>
+    <line x1="-18" y1="-16" x2="-18" y2="-4" stroke="#DAA14F" stroke-width="2"/>
+    <line x1="18" y1="-16" x2="18" y2="-4" stroke="#DAA14F" stroke-width="2"/>
+    <path d="M-26,-4 Q-18,10 -10,-4 Z" opacity="0.9"/>
+    <path d="M10,-4 Q18,10 26,-4 Z" opacity="0.9"/>
+  </g>
+</svg>`;
+
+app.get('/favicon.svg', (req, res) => {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(faviconSvg);
+});
+
+app.get('/favicon.ico', (req, res) => {
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Cache-Control', 'public, max-age=86400');
+    res.send(faviconSvg);
+});
+
+// ==========================================
 // Página inicial da API
 // ==========================================
 app.get('/', (req, res) => {
@@ -323,6 +353,7 @@ app.get('/', (req, res) => {
     <meta charset="UTF-8">
     <title>API Yan Renat Advocacia</title>
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
