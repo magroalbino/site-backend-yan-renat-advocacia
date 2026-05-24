@@ -1,39 +1,46 @@
 # Backend - Site de Advocacia Yan & Renat
 
-Este é o backend do site de advocacia Yan & Renat, desenvolvido para gerenciar artigos jurídicos e comentários. A aplicação foi construída com **Node.js**, **Express** e **MongoDB**, e está configurada para deploy na **Vercel** como Serverless Functions.
+Backend do site de advocacia Yan Renat Advocacia e Consultoria, desenvolvido para gerenciar artigos jurídicos, curtidas e comentários com sistema de autorização. Construído com **Node.js**, **Express** e **MongoDB**, configurado para deploy na **Vercel**.
 
-## 🚀 Funcionalidades
+## Funcionalidades
 
-- **Gerenciamento de Artigos**: API para listagem e visualização de artigos jurídicos.
-- **Sistema de Comentários**: Permite que usuários deixem comentários em artigos específicos.
-- **Interface Integrada**: Serve arquivos estáticos para a interface administrativa/visualização.
-- **Conexão Resiliente**: Middleware para garantir conexão com o banco de dados em ambientes serverless.
+- **Artigos jurídicos**: listagem, busca por slug, curtidas e descurtidas (operações atômicas)
+- **Comentários**: criação com token de autor, listagem por artigo e exclusão autorizada
+- **Autorização de exclusão**: apenas o autor do comentário (via token) ou o admin (via API key) podem deletar
+- **Validação e sanitização**: todos os inputs são validados e sanitizados contra XSS
+- **Rate limiting**: proteção contra abuso com limites por janela de tempo
+- **Conexão resiliente**: middleware de reconexão automática para ambientes serverless
 
-## 🛠️ Tecnologias Utilizadas
+## Tecnologias
 
 - [Node.js](https://nodejs.org/)
 - [Express](https://expressjs.com/)
 - [Mongoose](https://mongoosejs.com/) (MongoDB ODM)
-- [CORS](https://github.com/expressjs/cors)
-- [Express Validator](https://express-validator.github.io/docs/)
+- [express-validator](https://express-validator.github.io/docs/) (validação e sanitização)
+- [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) (rate limiting)
+- [uuid](https://github.com/uuidjs/uuid) (geração de tokens de autor)
+- [cors](https://github.com/expressjs/cors)
+- [dotenv](https://github.com/motdotla/dotenv)
 
-## 📁 Estrutura do Projeto
+## Estrutura do Projeto
 
-```text
+```
 .
-├── public/             # Arquivos estáticos (HTML, CSS, JS, Imagens)
 ├── src/
-│   ├── config/         # Configurações (Banco de dados)
-│   ├── middleware/     # Middlewares (Conexão DB, etc)
-│   ├── models/         # Modelos do Mongoose (Artigo, Comentario)
-│   ├── routes/         # Definição das rotas da API
-│   └── app.js          # Configuração principal do Express
-├── server.js           # Ponto de entrada (Local e Vercel)
-├── vercel.json         # Configuração de deploy na Vercel
-└── package.json        # Dependências e scripts
+│   ├── config/
+│   │   └── database.js       # Wrapper de conexão com MongoDB
+│   └── models/
+│       ├── Artigo.js          # Schema: titulo, slug, descricao, conteudo, autor, data, curtidas
+│       └── Comentario.js      # Schema: slug, nome, texto, data, autorToken, ip
+├── app.js                     # App Express com rotas, validação, rate limit e CORS
+├── server.js                  # Entry point com graceful shutdown
+├── seed.js                    # Script para popular o banco com artigos de exemplo
+├── resetDB.js                 # Script para resetar curtidas e comentários
+├── vercel.json                # Configuração de deploy na Vercel
+└── package.json
 ```
 
-## ⚙️ Configuração Local
+## Configuração Local
 
 1. **Clone o repositório:**
    ```bash
@@ -47,10 +54,17 @@ Este é o backend do site de advocacia Yan & Renat, desenvolvido para gerenciar 
    ```
 
 3. **Configure as variáveis de ambiente:**
-   Crie um arquivo `.env` na raiz do projeto e adicione sua URI do MongoDB:
+
+   Crie um arquivo `.env` na raiz do projeto:
    ```env
    MONGODB_URI=sua_uri_do_mongodb
+   ADMIN_API_KEY=uma_chave_secreta_forte
    PORT=3000
+   ```
+
+   Para gerar uma chave de admin segura:
+   ```bash
+   openssl rand -hex 32
    ```
 
 4. **Inicie o servidor:**
@@ -59,21 +73,78 @@ Este é o backend do site de advocacia Yan & Renat, desenvolvido para gerenciar 
    ```
    O servidor estará rodando em `http://localhost:3000`.
 
-## 🌐 Deploy na Vercel
+## Variáveis de Ambiente
 
-O projeto já está configurado para a Vercel. Ao realizar o push para a branch `main`, o deploy será automático.
+| Variável | Obrigatória | Descrição |
+|---|---|---|
+| `MONGODB_URI` | Sim | URI de conexão com o MongoDB |
+| `ADMIN_API_KEY` | Sim | Chave secreta para autenticação de admin |
+| `PORT` | Não | Porta do servidor (padrão: 3000) |
 
-**Importante**: Lembre-se de configurar a variável de ambiente `MONGODB_URI` no painel da Vercel em *Settings > Environment Variables*.
-
-## 🛣️ Rotas da API
+## Rotas da API
 
 ### Artigos
-- `GET /api/artigos`: Lista todos os artigos.
-- `GET /api/artigos/:slug`: Retorna os detalhes de um artigo específico.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/artigos` | Lista todos os artigos ordenados por data |
+| `GET` | `/api/artigos/:slug` | Retorna um artigo pelo slug |
+| `POST` | `/api/artigos/:id/curtir` | Incrementa curtidas do artigo |
+| `POST` | `/api/artigos/:id/descurtir` | Decrementa curtidas (mínimo 0) |
 
 ### Comentários
-- `GET /api/comentarios/:slug`: Lista os comentários de um artigo.
-- `POST /api/comentarios/:slug`: Adiciona um novo comentário a um artigo.
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/comentarios/:slug` | Lista comentários de um artigo |
+| `POST` | `/api/comentarios/:slug` | Cria um comentário (retorna `autorToken`) |
+| `DELETE` | `/api/comentarios/:id` | Exclui um comentário (requer autorização) |
+
+### Sistema
+
+| Método | Rota | Descrição |
+|---|---|---|
+| `GET` | `/api/health` | Health check com status do banco |
+| `GET` | `/` | Página de documentação visual da API |
+
+## Autorização de Comentários
+
+### Criando um comentário
+
+O endpoint `POST /api/comentarios/:slug` retorna um `autorToken` junto com o comentário criado. O frontend deve guardar esse token (ex: `localStorage`) para permitir a exclusão futura.
+
+```json
+// Resposta do POST /api/comentarios/:slug
+{
+  "comment": { "_id": "...", "nome": "João", "texto": "Ótimo artigo!", "data": "..." },
+  "autorToken": "uuid-gerado-pelo-backend"
+}
+```
+
+### Excluindo um comentário
+
+Envie uma das seguintes headers na requisição `DELETE /api/comentarios/:id`:
+
+- **Como autor**: `x-autor-token: <token recebido na criação>`
+- **Como admin**: `x-admin-key: <ADMIN_API_KEY>`
+
+Sem um desses headers válidos, a exclusão retorna erro `401` ou `403`.
+
+## Rate Limiting
+
+| Tipo | Limite | Janela |
+|---|---|---|
+| Geral (todas as rotas) | 100 requisições | 15 minutos |
+| Escrita (curtir, comentar) | 30 requisições | 15 minutos |
+
+## Deploy na Vercel
+
+O projeto está configurado para deploy automático na Vercel ao fazer push para `main`.
+
+Configure as variáveis de ambiente no painel da Vercel em **Settings > Environment Variables**:
+- `MONGODB_URI`
+- `ADMIN_API_KEY`
 
 ---
-Desenvolvido para o site de advocacia Yan & Renat.
+
+Desenvolvido para o site de advocacia Yan Renat Advocacia e Consultoria.
