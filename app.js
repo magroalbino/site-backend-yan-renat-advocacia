@@ -9,6 +9,7 @@ const artigosRouter = require('./src/routes/artigos');
 const comentariosRouter = require('./src/routes/comentarios');
 
 const app = express();
+app.set('trust proxy', 1);
 
 // ==========================================
 // Seguranca: Headers HTTP
