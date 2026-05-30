@@ -8,7 +8,8 @@ const ArtigoSchema = new mongoose.Schema({
     slug: {
         type: String,
         required: true,
-        unique: true
+        unique: true,
+        index: true
     },
     descricao: {
         type: String,
@@ -24,12 +25,20 @@ const ArtigoSchema = new mongoose.Schema({
     },
     data: {
         type: Date,
-        default: Date.now
+        default: Date.now,
+        index: -1
     },
     curtidas: {
         type: Number,
         default: 0
     }
+});
+
+// Indice de texto para busca por palavras-chave
+ArtigoSchema.index({ titulo: 'text', descricao: 'text', conteudo: 'text' }, {
+    weights: { titulo: 10, descricao: 5, conteudo: 1 },
+    name: 'busca_textual',
+    default_language: 'portuguese'
 });
 
 module.exports = mongoose.model('Artigo', ArtigoSchema);

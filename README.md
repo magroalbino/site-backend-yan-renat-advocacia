@@ -1,24 +1,26 @@
-# Backend - Site de Advocacia Yan & Renat
+# Backend - Site de Advocacia Yan Renat Advocacia e Consultoria
 
-Backend do site de advocacia Yan Renat Advocacia e Consultoria, desenvolvido para gerenciar artigos jurídicos, curtidas e comentários com sistema de autorização. Construído com **Node.js**, **Express** e **MongoDB**, configurado para deploy na **Vercel**.
+Backend do site de advocacia Yan Renat Advocacia e Consultoria. Gerencia artigos juridicos, curtidas, comentarios com autenticacao por token, busca textual e CRUD administrativo. Construido com **Node.js**, **Express** e **MongoDB**, configurado para deploy na **Vercel**.
 
 ## Funcionalidades
 
-- **Artigos jurídicos**: listagem, busca por slug, curtidas e descurtidas (operações atômicas)
-- **Comentários**: criação com token de autor, listagem por artigo e exclusão autorizada
-- **Autorização de exclusão**: apenas o autor do comentário (via token) ou o admin (via API key) podem deletar
-- **Validação e sanitização**: todos os inputs são validados e sanitizados contra XSS
-- **Rate limiting**: proteção contra abuso com limites por janela de tempo
-- **Conexão resiliente**: middleware de reconexão automática para ambientes serverless
+- **Artigos juridicos**: listagem paginada, busca por slug, busca textual por palavras-chave
+- **Curtidas**: operacoes atomicas que previnem valores negativos
+- **Comentarios**: criacao com token de autor, listagem paginada e exclusao autorizada
+- **Autorizacao de exclusao**: apenas o autor (via token) ou o admin (via API key) podem deletar comentarios
+- **CRUD administrativo**: criar, editar e deletar artigos protegidos por API key
+- **Seguranca**: Helmet (headers HTTP), validacao/sanitizacao de inputs, rate limiting, CORS restritivo
+- **Busca textual**: indice de texto em portugues com pesos por campo (titulo > descricao > conteudo)
+- **Paginacao**: todos os endpoints de listagem suportam `?page=1&limit=20`
 
 ## Tecnologias
 
 - [Node.js](https://nodejs.org/)
 - [Express](https://expressjs.com/)
 - [Mongoose](https://mongoosejs.com/) (MongoDB ODM)
-- [express-validator](https://express-validator.github.io/docs/) (validação e sanitização)
+- [Helmet](https://helmetjs.github.io/) (headers de seguranca HTTP)
+- [express-validator](https://express-validator.github.io/docs/) (validacao e sanitizacao)
 - [express-rate-limit](https://github.com/express-rate-limit/express-rate-limit) (rate limiting)
-- [uuid](https://github.com/uuidjs/uuid) (geração de tokens de autor)
 - [cors](https://github.com/expressjs/cors)
 - [dotenv](https://github.com/motdotla/dotenv)
 
@@ -28,32 +30,39 @@ Backend do site de advocacia Yan Renat Advocacia e Consultoria, desenvolvido par
 .
 ├── src/
 │   ├── config/
-│   │   └── database.js       # Wrapper de conexão com MongoDB
-│   └── models/
-│       ├── Artigo.js          # Schema: titulo, slug, descricao, conteudo, autor, data, curtidas
-│       └── Comentario.js      # Schema: slug, nome, texto, data, autorToken, ip
-├── app.js                     # App Express com rotas, validação, rate limit e CORS
-├── server.js                  # Entry point com graceful shutdown
-├── seed.js                    # Script para popular o banco com artigos de exemplo
-├── resetDB.js                 # Script para resetar curtidas e comentários
-├── vercel.json                # Configuração de deploy na Vercel
+│   │   └── database.js          # Wrapper de conexao com MongoDB
+│   ├── middleware/
+│   │   ├── auth.js              # Verificacao de admin (API key)
+│   │   ├── connectDB.js         # Middleware de conexao MongoDB
+│   │   └── validate.js          # Middleware de validacao de inputs
+│   ├── models/
+│   │   ├── Artigo.js            # Schema com indice de texto para busca
+│   │   └── Comentario.js        # Schema com autorToken e indices compostos
+│   └── routes/
+│       ├── artigos.js           # Rotas publicas + CRUD admin
+│       └── comentarios.js       # Criacao com token, exclusao autorizada
+├── app.js                       # Configuracao Express, CORS, Helmet, montagem de rotas
+├── server.js                    # Entry point com graceful shutdown
+├── seed.js                      # Script para popular o banco com artigos de exemplo
+├── resetDB.js                   # Script para resetar curtidas e comentarios
+├── vercel.json                  # Configuracao de deploy na Vercel
 └── package.json
 ```
 
-## Configuração Local
+## Configuracao Local
 
-1. **Clone o repositório:**
+1. **Clone o repositorio:**
    ```bash
    git clone https://github.com/magroalbino/site-backend-yan-renat-advocacia.git
    cd site-backend-yan-renat-advocacia
    ```
 
-2. **Instale as dependências:**
+2. **Instale as dependencias:**
    ```bash
    npm install
    ```
 
-3. **Configure as variáveis de ambiente:**
+3. **Configure as variaveis de ambiente:**
 
    Crie um arquivo `.env` na raiz do projeto:
    ```env
@@ -71,77 +80,141 @@ Backend do site de advocacia Yan Renat Advocacia e Consultoria, desenvolvido par
    ```bash
    npm start
    ```
-   O servidor estará rodando em `http://localhost:3000`.
 
-## Variáveis de Ambiente
+## Variaveis de Ambiente
 
-| Variável | Obrigatória | Descrição |
+| Variavel | Obrigatoria | Descricao |
 |---|---|---|
-| `MONGODB_URI` | Sim | URI de conexão com o MongoDB |
-| `ADMIN_API_KEY` | Sim | Chave secreta para autenticação de admin |
-| `PORT` | Não | Porta do servidor (padrão: 3000) |
+| `MONGODB_URI` | Sim | URI de conexao com o MongoDB |
+| `ADMIN_API_KEY` | Sim | Chave secreta para autenticacao de admin |
+| `PORT` | Nao | Porta do servidor (padrao: 3000) |
 
 ## Rotas da API
 
-### Artigos
+### Artigos (publico)
 
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |---|---|---|
-| `GET` | `/api/artigos` | Lista todos os artigos ordenados por data |
+| `GET` | `/api/artigos?page=1&limit=20` | Lista artigos com paginacao |
+| `GET` | `/api/artigos/buscar?q=palavra` | Busca textual por palavras-chave |
 | `GET` | `/api/artigos/:slug` | Retorna um artigo pelo slug |
-| `POST` | `/api/artigos/:id/curtir` | Incrementa curtidas do artigo |
-| `POST` | `/api/artigos/:id/descurtir` | Decrementa curtidas (mínimo 0) |
+| `POST` | `/api/artigos/:id/curtir` | Incrementa curtidas |
+| `POST` | `/api/artigos/:id/descurtir` | Decrementa curtidas (minimo 0) |
 
-### Comentários
+### Artigos (admin - requer header `x-admin-key`)
 
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |---|---|---|
-| `GET` | `/api/comentarios/:slug` | Lista comentários de um artigo |
-| `POST` | `/api/comentarios/:slug` | Cria um comentário (retorna `autorToken`) |
-| `DELETE` | `/api/comentarios/:id` | Exclui um comentário (requer autorização) |
+| `POST` | `/api/artigos` | Cria um novo artigo |
+| `PUT` | `/api/artigos/:id` | Atualiza um artigo existente |
+| `DELETE` | `/api/artigos/:id` | Remove um artigo |
+
+### Comentarios
+
+| Metodo | Rota | Descricao |
+|---|---|---|
+| `GET` | `/api/comentarios/:slug?page=1&limit=50` | Lista comentarios com paginacao |
+| `POST` | `/api/comentarios/:slug` | Cria comentario (retorna `autorToken`) |
+| `DELETE` | `/api/comentarios/:id` | Exclui comentario (requer autorizacao) |
 
 ### Sistema
 
-| Método | Rota | Descrição |
+| Metodo | Rota | Descricao |
 |---|---|---|
 | `GET` | `/api/health` | Health check com status do banco |
-| `GET` | `/` | Página de documentação visual da API |
+| `GET` | `/` | Pagina de documentacao visual da API |
 
-## Autorização de Comentários
+## Autorizacao de Comentarios
 
-### Criando um comentário
+### Criando um comentario
 
-O endpoint `POST /api/comentarios/:slug` retorna um `autorToken` junto com o comentário criado. O frontend deve guardar esse token (ex: `localStorage`) para permitir a exclusão futura.
+O endpoint `POST /api/comentarios/:slug` retorna um `autorToken` junto com o comentario. O frontend deve guardar esse token (ex: `localStorage`) para permitir a exclusao futura.
 
 ```json
-// Resposta do POST /api/comentarios/:slug
 {
-  "comment": { "_id": "...", "nome": "João", "texto": "Ótimo artigo!", "data": "..." },
+  "comment": { "_id": "...", "nome": "Joao", "texto": "Otimo artigo!", "data": "..." },
   "autorToken": "uuid-gerado-pelo-backend"
 }
 ```
 
-### Excluindo um comentário
+### Excluindo um comentario
 
-Envie uma das seguintes headers na requisição `DELETE /api/comentarios/:id`:
+O endpoint `DELETE /api/comentarios/:id` aceita autorizacao de duas formas:
 
-- **Como autor**: `x-autor-token: <token recebido na criação>`
-- **Como admin**: `x-admin-key: <ADMIN_API_KEY>`
+**Como autor** (token recebido na criacao):
+- Header: `x-autor-token: <token>`
+- OU body: `{ "autorToken": "<token>" }`
 
-Sem um desses headers válidos, a exclusão retorna erro `401` ou `403`.
+**Como admin** (chave do servidor):
+- Header: `x-admin-key: <ADMIN_API_KEY>`
+
+Sem autorizacao valida, a exclusao retorna erro `401` ou `403`.
+
+Comentarios antigos (criados antes do sistema de tokens) so podem ser excluidos pelo admin.
+
+### Exemplo no frontend
+
+```js
+// Criar comentario e guardar token
+const res = await fetch(`${API}/api/comentarios/${slug}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ nome, texto })
+});
+const data = await res.json();
+localStorage.setItem(`comment_token_${data.comment._id}`, data.autorToken);
+
+// Excluir comentario com token
+await fetch(`${API}/api/comentarios/${id}`, {
+  method: 'DELETE',
+  headers: { 'x-autor-token': localStorage.getItem(`comment_token_${id}`) }
+});
+```
+
+## Administracao de Artigos
+
+Rotas protegidas por API key. Envie o header `x-admin-key` em todas as requisicoes admin.
+
+```bash
+# Criar artigo
+curl -X POST https://seu-backend.vercel.app/api/artigos \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: SUA_CHAVE" \
+  -d '{"titulo":"Titulo","slug":"titulo-slug","descricao":"Desc","conteudo":"Conteudo completo"}'
+
+# Editar artigo
+curl -X PUT https://seu-backend.vercel.app/api/artigos/ID_DO_ARTIGO \
+  -H "Content-Type: application/json" \
+  -H "x-admin-key: SUA_CHAVE" \
+  -d '{"titulo":"Novo titulo"}'
+
+# Deletar artigo
+curl -X DELETE https://seu-backend.vercel.app/api/artigos/ID_DO_ARTIGO \
+  -H "x-admin-key: SUA_CHAVE"
+```
 
 ## Rate Limiting
 
 | Tipo | Limite | Janela |
 |---|---|---|
-| Geral (todas as rotas) | 100 requisições | 15 minutos |
-| Escrita (curtir, comentar) | 30 requisições | 15 minutos |
+| Geral (todas as rotas) | 100 requisicoes | 15 minutos |
+| Escrita (curtir, comentar) | 30 requisicoes | 15 minutos |
+
+## Seguranca
+
+- **Helmet**: headers HTTP de seguranca (X-Content-Type-Options, X-Frame-Options, etc.)
+- **CORS restritivo**: apenas origens permitidas
+- **Validacao**: todos os inputs validados com express-validator
+- **Sanitizacao**: `.escape()` em nome e texto de comentarios contra XSS
+- **Rate limiting**: protecao contra abuso em endpoints de escrita
+- **Erros seguros**: mensagens genericas para o cliente, detalhes no console do servidor
+- **Payload limitado**: body maximo de 100kb
 
 ## Deploy na Vercel
 
-O projeto está configurado para deploy automático na Vercel ao fazer push para `main`.
+O projeto esta configurado para deploy automatico na Vercel ao fazer push para `main`.
 
-Configure as variáveis de ambiente no painel da Vercel em **Settings > Environment Variables**:
+Configure as variaveis de ambiente no painel da Vercel em **Settings > Environment Variables**:
 - `MONGODB_URI`
 - `ADMIN_API_KEY`
 

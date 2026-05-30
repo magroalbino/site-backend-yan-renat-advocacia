@@ -22,7 +22,7 @@ const ComentarioSchema = new mongoose.Schema({
     },
     autorToken: {
         type: String,
-        required: true,
+        default: '',
         index: true
     },
     ip: {
@@ -30,5 +30,8 @@ const ComentarioSchema = new mongoose.Schema({
         default: ''
     }
 });
+
+// Indice composto para consultas de comentarios por artigo
+ComentarioSchema.index({ slug: 1, data: -1 });
 
 module.exports = mongoose.model('Comentario', ComentarioSchema);
